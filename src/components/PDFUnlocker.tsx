@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Upload,
   Download,
+  Lock,
   Unlock,
   Shield,
   Zap,
@@ -14,6 +15,7 @@ import { usePDFProcessor } from "../hooks/usePDFProcessor";
 import { Button } from "./ui/Button";
 import { FileUpload } from "./ui/FileUpload";
 import { PasswordInput } from "./ui/PasswordInput";
+import { ModeSelector } from "./ui/ModeSelector";
 import { ApiClient } from "../utils/apiClient";
 
 const PDFUnlocker: React.FC = () => {
@@ -24,10 +26,14 @@ const PDFUnlocker: React.FC = () => {
   const {
     file,
     password,
+    ownerPassword,
+    mode,
     state,
     result,
     isPasswordProtected,
     setPassword,
+    setOwnerPassword,
+    setMode,
     handleFileSelect,
     processFile,
     downloadFile,
@@ -43,6 +49,40 @@ const PDFUnlocker: React.FC = () => {
 
     checkBackend();
   }, []);
+
+  // Get mode-specific content
+  const getModeInfo = () => {
+    if (mode === "remove") {
+      return {
+        title: "PDF Unlocker",
+        subtitle: "Remove password protection with Python-powered backend",
+        buttonText: state.isProcessing ? "Unlocking..." : "Remove Password",
+        successText: "Password Removed!",
+        successSubtext:
+          "Your PDF has been successfully unlocked by the Python backend",
+      };
+    } else {
+      return {
+        title: "PDF Protector",
+        subtitle: "Add password protection with Python-powered backend",
+        buttonText: state.isProcessing ? "Encrypting..." : "Add Password",
+        successText: "Password Added!",
+        successSubtext:
+          "Your PDF has been successfully encrypted by the Python backend",
+      };
+    }
+  };
+
+  const modeInfo = getModeInfo();
+
+  // Check if operation is allowed based on current PDF state and mode
+  const isOperationAllowed = () => {
+    if (mode === "remove") {
+      return isPasswordProtected === true;
+    } else {
+      return isPasswordProtected === false;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white relative overflow-hidden">
@@ -69,15 +109,19 @@ const PDFUnlocker: React.FC = () => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl blur-lg opacity-50"></div>
                 <div className="relative bg-gradient-to-r from-purple-500 to-blue-500 p-3 rounded-xl">
-                  <Unlock className="w-6 h-6 text-white" />
+                  {mode === "remove" ? (
+                    <Unlock className="w-6 h-6 text-white" />
+                  ) : (
+                    <Lock className="w-6 h-6 text-white" />
+                  )}
                 </div>
               </div>
               <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                PDF Unlocker
+                {modeInfo.title}
               </h1>
             </div>
             <p className="text-gray-400 text-base font-medium">
-              Remove password protection with Python-powered backend
+              {modeInfo.subtitle}
             </p>
             <div className="flex items-center justify-center gap-6 mt-4">
               <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -130,6 +174,15 @@ const PDFUnlocker: React.FC = () => {
             </div>
           )}
 
+          {/* Mode Selector */}
+          <div className="mb-6">
+            <ModeSelector
+              mode={mode}
+              onModeChange={setMode}
+              disabled={state.isProcessing || backendStatus === "offline"}
+            />
+          </div>
+
           {/* Main Card */}
           <div className="relative mb-6">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl blur-xl"></div>
@@ -164,35 +217,51 @@ const PDFUnlocker: React.FC = () => {
                       className={`flex items-center gap-3 p-3 rounded-lg border ${
                         isPasswordProtected
                           ? "bg-blue-500/10 border-blue-500/20"
-                          : "bg-yellow-500/10 border-yellow-500/20"
+                          : "bg-green-500/10 border-green-500/20"
                       }`}
                     >
                       <Info
                         className={`w-5 h-5 flex-shrink-0 ${
                           isPasswordProtected
                             ? "text-blue-400"
-                            : "text-yellow-400"
+                            : "text-green-400"
                         }`}
                       />
                       <p
                         className={`text-sm font-medium ${
                           isPasswordProtected
                             ? "text-blue-300"
-                            : "text-yellow-300"
+                            : "text-green-300"
                         }`}
                       >
                         {isPasswordProtected
-                          ? "This PDF is password protected"
-                          : "This PDF is not password protected"}
+                          ? "🔒 This PDF is password protected"
+                          : "🔓 This PDF is not password protected"}
                       </p>
                     </div>
                   )}
 
-                  {isPasswordProtected && (
+                  {/* Mode-specific validation messages */}
+                  {isPasswordProtected !== null && !isOperationAllowed() && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-400" />
+                      <p className="text-sm font-medium text-yellow-300">
+                        {mode === "remove"
+                          ? 'This PDF is not password protected. Switch to "Add Password" mode to encrypt it.'
+                          : 'This PDF is already password protected. Switch to "Remove Password" mode to decrypt it first.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Password Input - only show when operation is allowed */}
+                  {isOperationAllowed() && (
                     <PasswordInput
                       value={password}
                       onChange={setPassword}
                       onEnter={processFile}
+                      mode={mode}
+                      ownerPassword={ownerPassword}
+                      onOwnerPasswordChange={setOwnerPassword}
                     />
                   )}
 
@@ -202,14 +271,14 @@ const PDFUnlocker: React.FC = () => {
                       disabled={
                         state.isProcessing ||
                         !password ||
-                        isPasswordProtected === false ||
+                        !isOperationAllowed() ||
                         backendStatus === "offline"
                       }
                       loading={state.isProcessing}
-                      icon={Unlock}
+                      icon={mode === "remove" ? Unlock : Lock}
                       className="flex-1"
                     >
-                      {state.isProcessing ? "Unlocking..." : "Remove Password"}
+                      {modeInfo.buttonText}
                     </Button>
                     <Button
                       onClick={reset}
@@ -231,16 +300,19 @@ const PDFUnlocker: React.FC = () => {
                         <div className="relative">
                           <div className="absolute inset-0 bg-green-400 rounded-full blur-lg opacity-50 animate-pulse"></div>
                           <div className="relative bg-green-500 p-2 rounded-full">
-                            <Unlock className="w-6 h-6 text-white" />
+                            {mode === "remove" ? (
+                              <Unlock className="w-6 h-6 text-white" />
+                            ) : (
+                              <Lock className="w-6 h-6 text-white" />
+                            )}
                           </div>
                         </div>
                         <span className="text-xl font-bold text-green-400">
-                          Password Removed!
+                          {modeInfo.successText}
                         </span>
                       </div>
                       <p className="text-green-300 text-base">
-                        Your PDF has been successfully unlocked by the Python
-                        backend
+                        {modeInfo.successSubtext}
                       </p>
                     </div>
                   </div>
@@ -252,7 +324,8 @@ const PDFUnlocker: React.FC = () => {
                       icon={Download}
                       className="flex-1"
                     >
-                      Download Unlocked PDF
+                      Download {mode === "remove" ? "Unlocked" : "Protected"}{" "}
+                      PDF
                     </Button>
                     <Button
                       onClick={reset}
@@ -300,7 +373,7 @@ const PDFUnlocker: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                      <span>PyPDF2 powered</span>
+                      <span>128-bit encryption</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>

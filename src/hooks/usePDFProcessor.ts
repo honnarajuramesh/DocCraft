@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ProcessingState, FileInfo, PDFProcessorResult } from "../types";
+import type { ProcessingState, FileInfo, PDFProcessorResult } from "../types";
 import { ApiClient } from "../utils/apiClient";
 
 export type ProcessingMode = "remove" | "add";
