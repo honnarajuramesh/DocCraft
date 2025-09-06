@@ -11,11 +11,14 @@
     "build:css": "tailwindcss -i ./src/index.css -o ./dist/output.css --watch"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.3.0",
     "lucide-react": "^0.542.0",
     "path": "^0.12.7",
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.149",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-pdf": "^10.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
