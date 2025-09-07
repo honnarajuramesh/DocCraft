@@ -5,7 +5,7 @@ import {
   Unlock,
   Zap,
   Shield,
-  Star,
+  FileImage,
   ArrowRight,
 } from "lucide-react";
 
@@ -42,6 +42,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       description:
         "All processing happens locally on your machine. Your files never leave your device.",
       color: "from-green-500 to-emerald-500",
+    },
+    {
+      icon: FileImage,
+      title: "PDF to Images",
+      description:
+        "Convert PDF pages to high-quality PNG or JPEG images with customizable DPI settings.",
+      color: "from-green-500 to-emerald-500",
+    },
+    {
+      icon: FileText,
+      title: "Images to PDF",
+      description:
+        "Combine multiple images into a single PDF document with flexible page layouts.",
+      color: "from-blue-500 to-purple-500",
     },
   ];
 

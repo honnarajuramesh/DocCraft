@@ -10,48 +10,25 @@ export interface CheckProtectedResponse {
 }
 
 export class ApiClient {
-  static async checkPasswordProtected(
-    file: File
-  ): Promise<ApiResponse<CheckProtectedResponse>> {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
+  // [Keep existing methods: checkPasswordProtected, removePassword, addPassword]
 
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/check-protected`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        return { error: errorData.detail || "Failed to check PDF protection" };
-      }
-
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      console.error("API Error:", error);
-      return {
-        error:
-          "Network error. Make sure the Python backend is running on port 8000.",
-      };
-    }
-  }
-
-  static async removePassword(
+  static async convertPdfToImages(
     file: File,
-    password: string
+    format: "PNG" | "JPEG" | "JPG" = "PNG",
+    dpi: number = 200,
+    password?: string
   ): Promise<ApiResponse<Blob>> {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("password", password);
+      formData.append("format", format);
+      formData.append("dpi", dpi.toString());
+      if (password) {
+        formData.append("password", password);
+      }
 
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/remove-password`,
+        `${import.meta.env.VITE_BASE_URL}/api/pdf-to-images`,
         {
           method: "POST",
           body: formData,
@@ -59,8 +36,10 @@ export class ApiClient {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return { error: errorData.detail || "Failed to remove password" };
+        const errorData = await response
+          .json()
+          .catch(() => ({ detail: "Network error" }));
+        return { error: errorData.detail || "Failed to convert PDF to images" };
       }
 
       const blob = await response.blob();
@@ -69,26 +48,28 @@ export class ApiClient {
       console.error("API Error:", error);
       return {
         error:
-          "Network error. Make sure the Python backend is running on port 8000.",
+          "Network error. Please check your internet connection and try again.",
       };
     }
   }
 
-  static async addPassword(
-    file: File,
-    password: string,
-    ownerPassword?: string
+  static async convertImagesToPdf(
+    files: File[],
+    pageSize: "A4" | "LETTER" | "LEGAL" = "A4",
+    orientation: "portrait" | "landscape" = "portrait",
+    quality: number = 85
   ): Promise<ApiResponse<Blob>> {
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("password", password);
-      if (ownerPassword) {
-        formData.append("owner_password", ownerPassword);
-      }
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
+      formData.append("page_size", pageSize);
+      formData.append("orientation", orientation);
+      formData.append("quality", quality.toString());
 
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/add-password`,
+        `${import.meta.env.VITE_BASE_URL}/api/images-to-pdf`,
         {
           method: "POST",
           body: formData,
@@ -96,10 +77,10 @@ export class ApiClient {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        return {
-          error: errorData.detail || "Failed to add password protection",
-        };
+        const errorData = await response
+          .json()
+          .catch(() => ({ detail: "Network error" }));
+        return { error: errorData.detail || "Failed to convert images to PDF" };
       }
 
       const blob = await response.blob();
@@ -108,7 +89,7 @@ export class ApiClient {
       console.error("API Error:", error);
       return {
         error:
-          "Network error. Make sure the Python backend is running on port 8000.",
+          "Network error. Please check your internet connection and try again.",
       };
     }
   }
@@ -116,12 +97,24 @@ export class ApiClient {
   static async healthCheck(): Promise<ApiResponse<any>> {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/health`
+        `${import.meta.env.VITE_BASE_URL}/api/health`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
+
+      if (!response.ok) {
+        return { error: "Backend unavailable" };
+      }
+
       const data = await response.json();
       return { data };
     } catch (error) {
-      return { error: "Backend not available" };
+      console.error("Health check error:", error);
+      return { error: "Backend unavailable" };
     }
   }
 }

@@ -10,6 +10,8 @@ import {
   Info,
   CheckCircle,
   XCircle,
+  FileImage,
+  FileText,
 } from "lucide-react";
 import { usePDFProcessor } from "../hooks/usePDFProcessor";
 import { Button } from "./ui/Button";
@@ -17,11 +19,16 @@ import { FileUpload } from "./ui/FileUpload";
 import { PasswordInput } from "./ui/PasswordInput";
 import { ModeSelector } from "./ui/ModeSelector";
 import { ApiClient } from "../utils/apiClient";
+import { PdfToImages } from "./PdfToImages";
+import { ImagesToPdf } from "./ImagesToPdf";
 
 const PDFUnlocker: React.FC = () => {
   const [backendStatus, setBackendStatus] = useState<
     "checking" | "online" | "offline"
   >("checking");
+  const [activeTab, setActiveTab] = useState<
+    "password" | "pdf-to-images" | "images-to-pdf"
+  >("password");
 
   const {
     file,
@@ -154,7 +161,43 @@ const PDFUnlocker: React.FC = () => {
               </div>
             </div>
           </div>
-
+          <div className="mb-6">
+            <div className="flex bg-gray-800/50 rounded-xl p-1 border border-gray-700/50">
+              <button
+                onClick={() => setActiveTab("password")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  activeTab === "password"
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                }`}
+              >
+                <Lock className="w-4 h-4" />
+                Password Tools
+              </button>
+              <button
+                onClick={() => setActiveTab("pdf-to-images")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  activeTab === "pdf-to-images"
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                }`}
+              >
+                <FileImage className="w-4 h-4" />
+                PDF to Images
+              </button>
+              <button
+                onClick={() => setActiveTab("images-to-pdf")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  activeTab === "images-to-pdf"
+                    ? "bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg"
+                    : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                Images to PDF
+              </button>
+            </div>
+          </div>
           {/* Backend Status Warning */}
           {backendStatus === "offline" && (
             <div className="mb-6 relative">
@@ -174,186 +217,200 @@ const PDFUnlocker: React.FC = () => {
             </div>
           )}
 
-          {/* Mode Selector */}
-          <div className="mb-6">
-            <ModeSelector
-              mode={mode}
-              onModeChange={setMode}
-              disabled={state.isProcessing || backendStatus === "offline"}
-            />
-          </div>
-
           {/* Main Card */}
-          <div className="relative mb-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl blur-xl"></div>
-            <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
-              {!file && <FileUpload onFileSelect={handleFileSelect} />}
+          {activeTab === "password" && (
+            <>
+              {/* Mode Selector */}
+              <div className="mb-6">
+                <ModeSelector
+                  mode={mode}
+                  onModeChange={setMode}
+                  disabled={state.isProcessing || backendStatus === "offline"}
+                />
+              </div>
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl blur-xl"></div>
+                <div className="relative bg-gray-900/80 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-6 shadow-2xl">
+                  {!file && <FileUpload onFileSelect={handleFileSelect} />}
 
-              {file && !result && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                    <div className="relative flex-shrink-0">
-                      <div className="absolute inset-0 bg-blue-500/20 rounded-lg blur-md"></div>
-                      <div className="relative bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-                        <Upload className="w-6 h-6 text-blue-400" />
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="font-semibold text-white text-base truncate"
-                        title={file.name}
-                      >
-                        {file.name}
-                      </p>
-                      <p className="text-gray-400 text-sm">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB • PDF Document
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Password Protection Status */}
-                  {isPasswordProtected !== null && (
-                    <div
-                      className={`flex items-center gap-3 p-3 rounded-lg border ${
-                        isPasswordProtected
-                          ? "bg-blue-500/10 border-blue-500/20"
-                          : "bg-green-500/10 border-green-500/20"
-                      }`}
-                    >
-                      <Info
-                        className={`w-5 h-5 flex-shrink-0 ${
-                          isPasswordProtected
-                            ? "text-blue-400"
-                            : "text-green-400"
-                        }`}
-                      />
-                      <p
-                        className={`text-sm font-medium ${
-                          isPasswordProtected
-                            ? "text-blue-300"
-                            : "text-green-300"
-                        }`}
-                      >
-                        {isPasswordProtected
-                          ? "🔒 This PDF is password protected"
-                          : "🔓 This PDF is not password protected"}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Mode-specific validation messages */}
-                  {isPasswordProtected !== null && !isOperationAllowed() && (
-                    <div className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20">
-                      <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-400" />
-                      <p className="text-sm font-medium text-yellow-300">
-                        {mode === "remove"
-                          ? 'This PDF is not password protected. Switch to "Add Password" mode to encrypt it.'
-                          : 'This PDF is already password protected. Switch to "Remove Password" mode to decrypt it first.'}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Password Input - only show when operation is allowed */}
-                  {isOperationAllowed() && (
-                    <PasswordInput
-                      value={password}
-                      onChange={setPassword}
-                      onEnter={processFile}
-                      mode={mode}
-                      ownerPassword={ownerPassword}
-                      onOwnerPasswordChange={setOwnerPassword}
-                    />
-                  )}
-
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={processFile}
-                      disabled={
-                        state.isProcessing ||
-                        !password ||
-                        !isOperationAllowed() ||
-                        backendStatus === "offline"
-                      }
-                      loading={state.isProcessing}
-                      icon={mode === "remove" ? Unlock : Lock}
-                      className="flex-1"
-                    >
-                      {modeInfo.buttonText}
-                    </Button>
-                    <Button
-                      onClick={reset}
-                      variant="secondary"
-                      className="px-4"
-                    >
-                      Reset
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {result && (
-                <div className="text-center space-y-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl blur-xl"></div>
-                    <div className="relative bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
-                      <div className="flex items-center justify-center gap-4 mb-3">
-                        <div className="relative">
-                          <div className="absolute inset-0 bg-green-400 rounded-full blur-lg opacity-50 animate-pulse"></div>
-                          <div className="relative bg-green-500 p-2 rounded-full">
-                            {mode === "remove" ? (
-                              <Unlock className="w-6 h-6 text-white" />
-                            ) : (
-                              <Lock className="w-6 h-6 text-white" />
-                            )}
+                  {file && !result && (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                        <div className="relative flex-shrink-0">
+                          <div className="absolute inset-0 bg-blue-500/20 rounded-lg blur-md"></div>
+                          <div className="relative bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
+                            <Upload className="w-6 h-6 text-blue-400" />
                           </div>
                         </div>
-                        <span className="text-xl font-bold text-green-400">
-                          {modeInfo.successText}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="font-semibold text-white text-base truncate"
+                            title={file.name}
+                          >
+                            {file.name}
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB • PDF
+                            Document
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-green-300 text-base">
-                        {modeInfo.successSubtext}
-                      </p>
+
+                      {/* Password Protection Status */}
+                      {isPasswordProtected !== null && (
+                        <div
+                          className={`flex items-center gap-3 p-3 rounded-lg border ${
+                            isPasswordProtected
+                              ? "bg-blue-500/10 border-blue-500/20"
+                              : "bg-green-500/10 border-green-500/20"
+                          }`}
+                        >
+                          <Info
+                            className={`w-5 h-5 flex-shrink-0 ${
+                              isPasswordProtected
+                                ? "text-blue-400"
+                                : "text-green-400"
+                            }`}
+                          />
+                          <p
+                            className={`text-sm font-medium ${
+                              isPasswordProtected
+                                ? "text-blue-300"
+                                : "text-green-300"
+                            }`}
+                          >
+                            {isPasswordProtected
+                              ? "🔒 This PDF is password protected"
+                              : "🔓 This PDF is not password protected"}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Mode-specific validation messages */}
+                      {isPasswordProtected !== null &&
+                        !isOperationAllowed() && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/20">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0 text-yellow-400" />
+                            <p className="text-sm font-medium text-yellow-300">
+                              {mode === "remove"
+                                ? 'This PDF is not password protected. Switch to "Add Password" mode to encrypt it.'
+                                : 'This PDF is already password protected. Switch to "Remove Password" mode to decrypt it first.'}
+                            </p>
+                          </div>
+                        )}
+
+                      {/* Password Input - only show when operation is allowed */}
+                      {isOperationAllowed() && (
+                        <PasswordInput
+                          value={password}
+                          onChange={setPassword}
+                          onEnter={processFile}
+                          mode={mode}
+                          ownerPassword={ownerPassword}
+                          onOwnerPasswordChange={setOwnerPassword}
+                        />
+                      )}
+
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={processFile}
+                          disabled={
+                            state.isProcessing ||
+                            !password ||
+                            !isOperationAllowed() ||
+                            backendStatus === "offline"
+                          }
+                          loading={state.isProcessing}
+                          icon={mode === "remove" ? Unlock : Lock}
+                          className="flex-1"
+                        >
+                          {modeInfo.buttonText}
+                        </Button>
+                        <Button
+                          onClick={reset}
+                          variant="secondary"
+                          className="px-4"
+                        >
+                          Reset
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={downloadFile}
-                      variant="success"
-                      icon={Download}
-                      className="flex-1"
-                    >
-                      Download {mode === "remove" ? "Unlocked" : "Protected"}{" "}
-                      PDF
-                    </Button>
-                    <Button
-                      onClick={reset}
-                      variant="secondary"
-                      className="px-4"
-                    >
-                      Process Another
-                    </Button>
-                  </div>
-                </div>
-              )}
+                  {result && (
+                    <div className="text-center space-y-6">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl blur-xl"></div>
+                        <div className="relative bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-6">
+                          <div className="flex items-center justify-center gap-4 mb-3">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-green-400 rounded-full blur-lg opacity-50 animate-pulse"></div>
+                              <div className="relative bg-green-500 p-2 rounded-full">
+                                {mode === "remove" ? (
+                                  <Unlock className="w-6 h-6 text-white" />
+                                ) : (
+                                  <Lock className="w-6 h-6 text-white" />
+                                )}
+                              </div>
+                            </div>
+                            <span className="text-xl font-bold text-green-400">
+                              {modeInfo.successText}
+                            </span>
+                          </div>
+                          <p className="text-green-300 text-base">
+                            {modeInfo.successSubtext}
+                          </p>
+                        </div>
+                      </div>
 
-              {state.error && (
-                <div className="mt-6 relative">
-                  <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-xl"></div>
-                  <div className="relative flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-red-300 font-medium text-sm">
-                      {state.error}
-                    </p>
-                  </div>
+                      <div className="flex gap-3">
+                        <Button
+                          onClick={downloadFile}
+                          variant="success"
+                          icon={Download}
+                          className="flex-1"
+                        >
+                          Download{" "}
+                          {mode === "remove" ? "Unlocked" : "Protected"} PDF
+                        </Button>
+                        <Button
+                          onClick={reset}
+                          variant="secondary"
+                          className="px-4"
+                        >
+                          Process Another
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {state.error && (
+                    <div className="mt-6 relative">
+                      <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-xl"></div>
+                      <div className="relative flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-red-300 font-medium text-sm">
+                          {state.error}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </>
+          )}
+          {activeTab === "pdf-to-images" && <PdfToImages />}
+          {activeTab === "images-to-pdf" && <ImagesToPdf />}
 
           {/* Security Notice */}
-          <div className="relative">
+          <div
+            className="relative"
+            style={
+              activeTab == "pdf-to-images" || activeTab == "images-to-pdf"
+                ? { marginTop: "2rem" }
+                : {}
+            }
+          >
             <div className="absolute inset-0 bg-blue-500/5 rounded-xl blur-xl"></div>
             <div className="relative bg-gray-900/60 backdrop-blur-sm border border-gray-700/30 rounded-xl p-4">
               <div className="flex items-start gap-3">
